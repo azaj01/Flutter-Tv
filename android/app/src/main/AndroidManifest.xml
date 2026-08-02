@@ -1,5 +1,9 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.tiwee.media">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required to reach the channel API and to play streams. Only the debug
+         and profile manifests declared it, so release builds had no network
+         access at all. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <queries>
         <!-- If your app opens https URLs -->
         <intent>
@@ -11,7 +15,8 @@
    <application
         android:label="Tiwee"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:networkSecurityConfig="@xml/network_security_config">
 
         <activity
             android:name=".MainActivity"

@@ -44,3 +44,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Build outputs that were being picked up as untracked changes
+*.apk
+*.aab
+**/ios/build/
+**/ios/Pods/
+**/ios/.symlinks/
