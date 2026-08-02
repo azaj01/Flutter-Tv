@@ -5,7 +5,7 @@ class ShowSnackBar {
 
   final BuildContext context;
   final String text;
-  void show(){
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(text)));
+  void show() {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 }

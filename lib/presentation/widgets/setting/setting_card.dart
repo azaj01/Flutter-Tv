@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:Tiwee/core/consts.dart';
+
+import 'package:tiwee/core/theme/app_colors.dart';
 
 class SettingCard extends StatelessWidget {
-  const SettingCard({Key? key,required this.function, required this.child}) : super(key: key);
+  const SettingCard({
+    required this.onTap,
+    required this.child,
+    super.key,
+  });
+
+  final VoidCallback onTap;
   final Widget child;
-  final Function function;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: (){
-        function();
-      },
+      onTap: onTap,
       child: Container(
-          decoration: BoxDecoration(
-              color: kGray, borderRadius: BorderRadius.circular(20)),
-          child: child),
+        decoration: BoxDecoration(
+          color: context.colors.card,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: child,
+      ),
     );
   }
 }

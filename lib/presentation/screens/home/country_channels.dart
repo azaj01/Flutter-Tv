@@ -1,59 +1,66 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
-import 'package:Tiwee/business_logic/provider/country_provider.dart';
-import 'package:Tiwee/core/consts.dart';
-import 'package:Tiwee/presentation/screens/home/player.dart';
-import 'package:Tiwee/presentation/widgets/main_appbar.dart';
-import 'package:Tiwee/presentation/widgets/tv_card.dart';
-
-//
-// final clickedStarProvider = StateProvider<bool>((ref) {
-//   bool value = false;
-//   void toggle(){
-//     value =!value;
-//   }
-//   return value;
-// });
-
-
+import 'package:tiwee/core/consts.dart';
+import 'package:tiwee/core/providers.dart';
+import 'package:tiwee/presentation/widgets/channel_grid.dart';
+import 'package:tiwee/presentation/widgets/error_view.dart';
+import 'package:tiwee/presentation/widgets/main_appbar.dart';
 
 class CountryChannels extends ConsumerWidget {
-  const CountryChannels({Key? key, required this.country}) : super(key: key);
-  final String country;
+  const CountryChannels({
+    required this.countryCode,
+    required this.countryName,
+    super.key,
+  });
+
+  /// ISO country code used to filter channels (matches `ChannelEntity.country`).
+  final String countryCode;
+  final String countryName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final size = MediaQuery.of(context).size;
-    final channels = ref.watch(countryProvider);
-
+    final channelsAsync = ref.watch(channelsForCountryProvider(countryCode));
 
     return SafeArea(
       child: Scaffold(
-          body: Column(
-        children: [
-           MainAppbar(widget: Text(country,style: TextStyle(color: Colors.white70),)),
-          channels.when(
-            data: (data) => Expanded(
-              child: Container(
-                  child: GridView.count(
-                crossAxisCount: 4,
-
-                children: List.generate(data[country]!.length, (index) {
-                  return GestureDetector(onTap: ()=>Navigator.push(context, MaterialPageRoute(builder: (context) => Player(url: data[country]![index].url),)),child: TvCard(size: size, index: index, data: data, ref: ref, country: country));
-                }),
-              )),
+        body: Column(
+          children: [
+            MainAppbar(
+              widget: Text(
+                countryName,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white70),
+              ),
             ),
-            error: (error, stackTrace) => Text(error.toString()),
-            loading: () =>  SizedBox(
-                width: 50, child: Lottie.asset(kLoading, width: 60)),
-          ),
-        ],
-      )),
+            Expanded(
+              child: channelsAsync.when(
+                data: (channels) {
+                  if (channels.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No channels found',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    );
+                  }
+                  return RefreshIndicator(
+                    onRefresh: ref.read(catalogRefresherProvider).refreshQuietly,
+                    child: ChannelGrid(channels: channels),
+                  );
+                },
+                error: (error, stackTrace) => CatalogErrorView(error: error),
+                loading: () => Center(
+                  child: SizedBox(
+                    width: 50,
+                    child: Lottie.asset(kLoading, width: 60),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
-
-
-
