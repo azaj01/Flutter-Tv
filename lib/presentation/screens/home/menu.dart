@@ -1,12 +1,11 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
-import 'package:tiwee/core/consts.dart';
 import 'package:tiwee/core/providers.dart';
 import 'package:tiwee/core/theme/app_colors.dart';
 import 'package:tiwee/domain/entities/category_entity.dart';
 import 'package:tiwee/domain/entities/channel_entity.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 import 'package:tiwee/presentation/screens/home/sorted_by_category_page.dart';
 import 'package:tiwee/presentation/screens/home/sorted_by_country_page.dart';
 import 'package:tiwee/presentation/widgets/clock_label.dart';
@@ -89,7 +88,7 @@ class _MenuGrid extends ConsumerWidget {
         categories.isLoading ||
         channelsByCategory.isLoading;
     if (isLoading) {
-      return Center(child: Lottie.asset(kLoading, width: size.width / 4));
+      return Center(child: Assets.animation.loading.lottie(width: size.width / 4));
     }
 
     final channelList = channels.value ?? const [];
@@ -185,99 +184,101 @@ class _MenuCardConfig {
   });
 
   final String title;
-  final String icon;
+  final SvgGenImage icon;
   final String? categoryId;
 
-  static List<_MenuCardConfig> get defaults => const [
-        _MenuCardConfig(title: 'Live Tv', icon: 'assets/icons/tv.svg'),
+  // Not const: the generated asset refs are getters, so the list is built
+  // once at first use instead of being folded into a const literal.
+  static final List<_MenuCardConfig> defaults = [
+        _MenuCardConfig(title: 'Live Tv', icon: Assets.icons.tv),
         _MenuCardConfig(
           title: 'Movies',
-          icon: 'assets/icons/popcorn.svg',
+          icon: Assets.icons.popcorn,
           categoryId: 'movies',
         ),
         _MenuCardConfig(
           title: 'Series',
-          icon: 'assets/icons/movie.svg',
+          icon: Assets.icons.movie,
           categoryId: 'series',
         ),
         _MenuCardConfig(
           title: 'Animation',
-          icon: 'assets/icons/animation.svg',
+          icon: Assets.icons.animation,
           categoryId: 'animation',
         ),
         _MenuCardConfig(
           title: 'Music',
-          icon: 'assets/icons/music.svg',
+          icon: Assets.icons.music,
           categoryId: 'music',
         ),
         _MenuCardConfig(
           title: 'Auto',
-          icon: 'assets/icons/auto.svg',
+          icon: Assets.icons.auto,
           categoryId: 'auto',
         ),
         _MenuCardConfig(
           title: 'Sport',
-          icon: 'assets/icons/sport.svg',
+          icon: Assets.icons.sport,
           categoryId: 'sports',
         ),
         _MenuCardConfig(
           title: 'News',
-          icon: 'assets/icons/news.svg',
+          icon: Assets.icons.news,
           categoryId: 'news',
         ),
         _MenuCardConfig(
           title: 'Cooking',
-          icon: 'assets/icons/coocking.svg',
+          icon: Assets.icons.cooking,
           categoryId: 'cooking',
         ),
         _MenuCardConfig(
           title: 'Kids',
-          icon: 'assets/icons/kids.svg',
+          icon: Assets.icons.kids,
           categoryId: 'kids',
         ),
         _MenuCardConfig(
           title: 'Education',
-          icon: 'assets/icons/education.svg',
+          icon: Assets.icons.education,
           categoryId: 'education',
         ),
         _MenuCardConfig(
           title: 'Business',
-          icon: 'assets/icons/business.svg',
+          icon: Assets.icons.business,
           categoryId: 'business',
         ),
         _MenuCardConfig(
           title: 'Relaxation',
-          icon: 'assets/icons/relaxation.svg',
+          icon: Assets.icons.relaxation,
           categoryId: 'relax',
         ),
         _MenuCardConfig(
           title: 'Entertainment',
-          icon: 'assets/icons/entertainment.svg',
+          icon: Assets.icons.entertainment,
           categoryId: 'entertainment',
         ),
         _MenuCardConfig(
           title: 'Lifestyle',
-          icon: 'assets/icons/lifeStyle.svg',
+          icon: Assets.icons.lifeStyle,
           categoryId: 'lifestyle',
         ),
         _MenuCardConfig(
           title: 'Science',
-          icon: 'assets/icons/science.svg',
+          icon: Assets.icons.science,
           categoryId: 'science',
         ),
         _MenuCardConfig(
           title: 'Comedy',
-          icon: 'assets/icons/comedy.svg',
+          icon: Assets.icons.comedy,
           categoryId: 'comedy',
         ),
         _MenuCardConfig(
           title: 'Family',
-          icon: 'assets/icons/family.svg',
+          icon: Assets.icons.family,
           categoryId: 'family',
         ),
         _MenuCardConfig(
           title: 'Shop',
-          icon: 'assets/icons/shop.svg',
+          icon: Assets.icons.shop,
           categoryId: 'shop',
         ),
       ];

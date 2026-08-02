@@ -2,10 +2,9 @@ import 'package:better_player_plus/better_player_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
-import 'package:tiwee/core/consts.dart';
 import 'package:tiwee/core/utils/sleep_timer.dart';
 import 'package:tiwee/domain/entities/channel_entity.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 
 /// Full screen player for a channel.
 ///
@@ -53,8 +52,7 @@ class _PlayerState extends ConsumerState<Player> {
           enablePlaybackSpeed: false,
           loadingWidget: SizedBox(
             width: 100,
-            child: Lottie.asset(
-              kTvLoading,
+            child: Assets.animation.spinner.lottie(
               width: 60,
               repeat: true,
               reverse: true,

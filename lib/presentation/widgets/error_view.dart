@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tiwee/core/consts.dart';
 import 'package:tiwee/core/providers.dart';
 import 'package:tiwee/data/datasources/iptv_remote_data_source.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 
 /// Turns an exception into something worth showing a user.
 String friendlyErrorMessage(Object? error) {
@@ -55,10 +56,12 @@ class _CatalogErrorViewState extends ConsumerState<CatalogErrorView> {
               ),
               const SizedBox(height: 24),
               if (_retrying)
-                const SizedBox(
-                  height: 24,
-                  width: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                // Roughly the height of the button it replaces, so the column
+                // does not resize while the retry is in flight.
+                SizedBox(
+                  height: 48,
+                  width: 60,
+                  child: Assets.animation.spinner.lottie(),
                 )
               else
                 FilledButton.icon(

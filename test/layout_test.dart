@@ -5,6 +5,7 @@ import 'package:tiwee/core/providers.dart';
 import 'package:tiwee/domain/entities/channel_entity.dart';
 import 'package:tiwee/domain/entities/country_entity.dart';
 import 'package:tiwee/domain/repositories/i_channel_repository.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 import 'package:tiwee/presentation/screens/home/parental_control_page.dart';
 import 'package:tiwee/presentation/screens/home/saved_channels_page.dart';
 import 'package:tiwee/presentation/screens/home/setting.dart';
@@ -81,8 +82,8 @@ void main() {
         Center(
           child: SizedBox.fromSize(
             size: _menuTile,
-            child: const BigCardChannels(
-              icon: 'assets/icons/tv.svg',
+            child: BigCardChannels(
+              icon: Assets.icons.tv,
               text: 'Live Tv',
               channelsCount: 10469,
               isLiveCard: true,
@@ -103,8 +104,8 @@ void main() {
         Center(
           child: SizedBox.fromSize(
             size: _menuTile,
-            child: const BigCardChannels(
-              icon: 'assets/icons/entertainment.svg',
+            child: BigCardChannels(
+              icon: Assets.icons.entertainment,
               text: 'Entertainment',
               channelsCount: 1234,
             ),
@@ -122,8 +123,8 @@ void main() {
         Center(
           child: SizedBox.fromSize(
             size: _menuTile,
-            child: const BigCardChannels(
-              icon: 'assets/icons/shop.svg',
+            child: BigCardChannels(
+              icon: Assets.icons.shop,
               text: 'Shop',
               channelsCount: 0,
             ),

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:tiwee/core/providers.dart';
 import 'package:tiwee/domain/entities/channel_entity.dart';
 import 'package:tiwee/domain/entities/country_entity.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 import 'package:tiwee/presentation/screens/home/all_channels_page.dart';
 import 'package:tiwee/presentation/screens/home/country_channels.dart';
 import 'package:tiwee/presentation/screens/home/saved_channels_page.dart';
@@ -51,8 +52,8 @@ class SortedByCountryPage extends ConsumerWidget {
     }
 
     if (countries.isLoading || channelsByCountry.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(child: Assets.animation.spinner.lottie(width: 60)),
       );
     }
 

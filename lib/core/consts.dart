@@ -65,7 +65,9 @@ const Map<String, String> kCategoryType = {
       'https://images.unsplash.com/photo-1504275107627-0c2ba7a43dba?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1974&q=80',
 };
 
-const String kLoading = 'assets/animation/loading.json';
-const String kSplashLoading = 'assets/animation/splash_loading.json';
-const String kNotFound = 'assets/animation/not_found.json';
-const String kTvLoading = 'assets/animation/tv_loading.json';
+// Asset paths are not listed here: they come from the generated
+// lib/gen/assets.gen.dart (Assets.animation.spinner, Assets.icons.saved, ...).
+
+/// Links opened from the settings screen.
+const String kTelegramUrl = 'https://telegram.me/Neffex97';
+const String kGithubUrl = 'https://github.com/NatureSmiling';

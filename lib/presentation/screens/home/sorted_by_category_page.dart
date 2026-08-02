@@ -3,10 +3,10 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:lottie/lottie.dart';
 import 'package:tiwee/core/consts.dart';
 import 'package:tiwee/core/providers.dart';
 import 'package:tiwee/domain/entities/channel_entity.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 import 'package:tiwee/presentation/widgets/channel_logo.dart';
 import 'package:tiwee/presentation/widgets/channel_player.dart';
 import 'package:tiwee/presentation/widgets/error_view.dart';
@@ -48,7 +48,9 @@ class _SortedByCategoryPageState extends ConsumerState<SortedByCategoryPage> {
 
     if (channelsAsync.isLoading && channels.isEmpty) {
       return Scaffold(
-        body: Center(child: Lottie.asset(kLoading, width: size.width / 4)),
+        body: Center(
+          child: Assets.animation.loading.lottie(width: size.width / 4),
+        ),
       );
     }
 
@@ -58,7 +60,7 @@ class _SortedByCategoryPageState extends ConsumerState<SortedByCategoryPage> {
           child: Center(
             child: SizedBox(
               width: size.width / 3,
-              child: Lottie.asset(kNotFound, width: 100),
+              child: Assets.animation.notFound.lottie(width: 100),
             ),
           ),
         ),

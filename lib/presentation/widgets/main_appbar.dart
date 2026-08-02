@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:line_icons/line_icons.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 import 'package:tiwee/presentation/screens/home/home_page.dart';
 
 class MainAppbar extends StatefulWidget {
@@ -126,9 +126,7 @@ class _MainAppbarState extends State<MainAppbar>
                       scale: 0.8,
                       child: RotationTransition(
                         turns: _rotation,
-                        child: SvgPicture.asset(
-                          'assets/icons/setting.svg',
-                        ),
+                        child: Assets.icons.setting.svg(),
                       ),
                     ),
                   ),

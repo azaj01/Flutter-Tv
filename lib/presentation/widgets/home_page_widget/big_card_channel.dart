@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:tiwee/core/consts.dart';
 import 'package:tiwee/core/theme/app_colors.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 
 /// Menu tile for a channel group.
 ///
@@ -22,7 +22,7 @@ class BigCardChannels extends StatelessWidget {
 
   static const double _iconExtent = 40;
 
-  final String icon;
+  final SvgGenImage icon;
   final String text;
   final int channelsCount;
   final bool isLiveCard;
@@ -43,7 +43,7 @@ class BigCardChannels extends StatelessWidget {
             SizedBox(
               height: _iconExtent,
               width: _iconExtent,
-              child: SvgPicture.asset(icon),
+              child: icon.svg(),
             ),
             _Title(text: text, isLiveCard: isLiveCard),
             _CountRow(count: channelsCount, isLiveCard: isLiveCard),

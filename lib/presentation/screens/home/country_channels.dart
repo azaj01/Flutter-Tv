@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
-import 'package:tiwee/core/consts.dart';
 import 'package:tiwee/core/providers.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 import 'package:tiwee/presentation/widgets/channel_grid.dart';
 import 'package:tiwee/presentation/widgets/error_view.dart';
 import 'package:tiwee/presentation/widgets/main_appbar.dart';
@@ -53,7 +52,7 @@ class CountryChannels extends ConsumerWidget {
                 loading: () => Center(
                   child: SizedBox(
                     width: 50,
-                    child: Lottie.asset(kLoading, width: 60),
+                    child: Assets.animation.loading.lottie(width: 60),
                   ),
                 ),
               ),

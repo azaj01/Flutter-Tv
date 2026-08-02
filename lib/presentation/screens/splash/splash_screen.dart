@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
-import 'package:tiwee/core/consts.dart';
 import 'package:tiwee/core/providers.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 import 'package:tiwee/presentation/screens/home/home_page.dart';
 
 /// Minimum time the splash animation stays on screen, so a warm start does not
@@ -65,10 +64,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Lottie.asset(
-              kSplashLoading,
-              width: width / 4,
-            ),
+            Assets.animation.splashLoading.lottie(width: width / 4),
             const SizedBox(
               height: 20,
             ),

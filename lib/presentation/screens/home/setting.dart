@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:line_icons/line_icon.dart';
 import 'package:line_icons/line_icons.dart';
@@ -10,6 +9,7 @@ import 'package:tiwee/core/providers.dart';
 import 'package:tiwee/core/theme/app_colors.dart';
 import 'package:tiwee/core/utils/show_snackbar.dart';
 import 'package:tiwee/core/utils/sleep_timer.dart';
+import 'package:tiwee/gen/assets.gen.dart';
 import 'package:tiwee/presentation/screens/home/parental_control_page.dart';
 import 'package:tiwee/presentation/screens/home/saved_channels_page.dart';
 import 'package:tiwee/presentation/widgets/clock_label.dart';
@@ -89,7 +89,7 @@ class Setting extends ConsumerWidget {
                           mainAxisCellCount: 1,
                           child: _IconTile(
                             label: 'Saved show',
-                            asset: 'assets/icons/saved.svg',
+                            asset: Assets.icons.saved,
                             badge: savedCount == 0 ? null : '$savedCount',
                             onTap: () => Navigator.push(
                               context,
@@ -123,8 +123,7 @@ class Setting extends ConsumerWidget {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SvgPicture.asset(
-                                  'assets/icons/parent_lock.svg',
+                                Assets.icons.parentLock.svg(
                                   colorFilter: adultAllowed
                                       ? _whiteSvgFilter
                                       : _greenSvgFilter,
@@ -159,10 +158,7 @@ class Setting extends ConsumerWidget {
                           crossAxisCellCount: 1,
                           mainAxisExtent: _kShortTileExtent,
                           child: SettingCard(
-                            onTap: () => openLink(
-                              'https://telegram.me/Neffex97',
-                              'Telegram',
-                            ),
+                            onTap: () => openLink(kTelegramUrl, 'Telegram'),
                             child: const LineIcon.telegram(
                               color: Colors.blueAccent,
                               size: 30,
@@ -173,10 +169,7 @@ class Setting extends ConsumerWidget {
                           crossAxisCellCount: 1,
                           mainAxisExtent: _kShortTileExtent,
                           child: SettingCard(
-                            onTap: () => openLink(
-                              'https://github.com/NatureSmiling',
-                              'GitHub',
-                            ),
+                            onTap: () => openLink(kGithubUrl, 'GitHub'),
                             child: const LineIcon.github(
                               color: Colors.white,
                               size: 30,
@@ -207,7 +200,7 @@ class _IconTile extends StatelessWidget {
   });
 
   final String label;
-  final String asset;
+  final SvgGenImage asset;
   final VoidCallback onTap;
   final String? badge;
 
@@ -223,11 +216,7 @@ class _IconTile extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SvgPicture.asset(
-                  asset,
-                  colorFilter: _whiteSvgFilter,
-                  width: 44,
-                ),
+                asset.svg(colorFilter: _whiteSvgFilter, width: 44),
                 const SizedBox(height: 12),
                 Text(
                   label,
@@ -328,8 +317,7 @@ class _SleepTimerTile extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SvgPicture.asset(
-            'assets/icons/alarm.svg',
+          Assets.icons.alarm.svg(
             colorFilter: timer.isActive ? _greenSvgFilter : _whiteSvgFilter,
             width: 44,
           ),
@@ -433,9 +421,8 @@ class _UpdateTileState extends ConsumerState<_UpdateTile> {
     setState(() => _checking = true);
 
     final version = await ref.read(appVersionProvider.future);
-    final status = await ref
-        .read(updateCheckerProvider)
-        .check(currentVersion: version);
+    final status =
+        await ref.read(updateCheckerProvider).check(currentVersion: version);
 
     if (!mounted) return;
     setState(() => _checking = false);
@@ -504,20 +491,21 @@ class _UpdateTileState extends ConsumerState<_UpdateTile> {
                   if (version != null)
                     Text(
                       'Version $version',
-                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 12),
                     ),
                 ],
               ),
             ),
             if (_checking)
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+              // Sized to the icon it replaces so the row does not jump.
+              SizedBox(
+                width: 26,
+                height: 26,
+                child: Assets.animation.spinner.lottie(),
               )
             else
-              SvgPicture.asset(
-                'assets/icons/update.svg',
+              Assets.icons.update.svg(
                 colorFilter: _greenSvgFilter,
                 width: 26,
               ),
