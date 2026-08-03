@@ -7,6 +7,7 @@ import 'package:tiwee/core/consts.dart';
 import 'package:tiwee/core/providers.dart';
 import 'package:tiwee/domain/entities/channel_entity.dart';
 import 'package:tiwee/gen/assets.gen.dart';
+import 'package:tiwee/presentation/widgets/channel_grid.dart';
 import 'package:tiwee/presentation/widgets/channel_logo.dart';
 import 'package:tiwee/presentation/widgets/channel_player.dart';
 import 'package:tiwee/presentation/widgets/error_view.dart';
@@ -123,54 +124,10 @@ class _SortedByCategoryPageState extends ConsumerState<SortedByCategoryPage> {
                   ),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 140,
-                            child: ChannelLogo(
-                              channel: channels[selectedIndex],
-                              padding: 12,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 3,
-                          child: AnimationLimiter(
-                            child: CarouselSlider.builder(
-                              itemCount: channels.length,
-                              itemBuilder: (context, index, realIndex) {
-                                return AnimationConfiguration.staggeredList(
-                                  position: index,
-                                  duration: const Duration(milliseconds: 700),
-                                  child: SlideAnimation(
-                                    verticalOffset: 50,
-                                    child: FadeInAnimation(
-                                      child: _ChannelRow(
-                                        channel: channels[index],
-                                        isSelected: index == selectedIndex,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                              options: CarouselOptions(
-                                onPageChanged: (index, reason) {
-                                  setState(() => _currentIndex = index);
-                                },
-                                aspectRatio: 1 / 5,
-                                viewportFraction: 0.2,
-                                enlargeCenterPage: true,
-                                scrollPhysics: const BouncingScrollPhysics(),
-                                scrollDirection: Axis.vertical,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    child:
+                        MediaQuery.orientationOf(context) == Orientation.portrait
+                            ? _buildGrid(channels)
+                            : _buildPreviewAndCarousel(channels, selectedIndex),
                   ),
                 ],
               ),
@@ -178,6 +135,82 @@ class _SortedByCategoryPageState extends ConsumerState<SortedByCategoryPage> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Portrait: the same responsive grid the country, all and saved pages use.
+  ///
+  /// The preview-beside-carousel layout is built for a wide viewport. In
+  /// portrait it squeezed the artwork into a ~90pt column and showed five
+  /// channels at a time down a tall screen, so the grid is used instead.
+  Widget _buildGrid(List<ChannelEntity> channels) {
+    return RefreshIndicator(
+      onRefresh: ref.read(catalogRefresherProvider).refreshQuietly,
+      child: ChannelGrid(channels: channels),
+    );
+  }
+
+  /// Landscape: artwork of the highlighted channel, with the channel list
+  /// scrolling vertically beside it.
+  Widget _buildPreviewAndCarousel(
+    List<ChannelEntity> channels,
+    int selectedIndex,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 140,
+            child: ChannelLogo(
+              channel: channels[selectedIndex],
+              padding: 12,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 3,
+          child: LayoutBuilder(
+            builder: (context, constraints) => AnimationLimiter(
+              child: CarouselSlider.builder(
+                itemCount: channels.length,
+                itemBuilder: (context, index, realIndex) {
+                  return AnimationConfiguration.staggeredList(
+                    position: index,
+                    duration: const Duration(milliseconds: 700),
+                    child: SlideAnimation(
+                      verticalOffset: 50,
+                      child: FadeInAnimation(
+                        child: _ChannelRow(
+                          channel: channels[index],
+                          isSelected: index == selectedIndex,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                options: CarouselOptions(
+                  onPageChanged: (index, reason) {
+                    setState(() => _currentIndex = index);
+                  },
+                  // An explicit height, not an aspect ratio: carousel_slider
+                  // wraps itself in an AspectRatio when height is null, and
+                  // 1/5 made it take its width from the available height.
+                  // Every row ended up ~65pt wide, so channel names rendered
+                  // at zero width and the row overflowed by a fraction of a
+                  // pixel.
+                  height: constraints.maxHeight,
+                  viewportFraction: 0.2,
+                  enlargeCenterPage: true,
+                  scrollPhysics: const BouncingScrollPhysics(),
+                  scrollDirection: Axis.vertical,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

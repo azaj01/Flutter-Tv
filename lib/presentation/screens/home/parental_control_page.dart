@@ -147,37 +147,68 @@ class ParentalControlPage extends ConsumerWidget {
     required String title,
     required String confirmLabel,
   }) {
-    final controller = TextEditingController();
-
     return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: context.colors.card,
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          obscureText: true,
-          keyboardType: TextInputType.number,
-          maxLength: 4,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(counterText: ''),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final value = controller.text;
-              Navigator.pop(context, value.length == 4 ? value : null);
-            },
-            child: Text(confirmLabel),
-          ),
-        ],
+      builder: (context) => _PinDialog(
+        title: title,
+        confirmLabel: confirmLabel,
       ),
-    ).whenComplete(controller.dispose);
+    );
+  }
+}
+
+/// Prompt for a 4-digit PIN. Pops the entered value, or null when cancelled.
+///
+/// Stateful so the controller lives and dies with the dialog. Creating it
+/// outside and disposing it in showDialog().whenComplete() disposed it as soon
+/// as the route popped, while that route was still animating out and
+/// rebuilding this TextField against the dead controller.
+class _PinDialog extends StatefulWidget {
+  const _PinDialog({required this.title, required this.confirmLabel});
+
+  final String title;
+  final String confirmLabel;
+
+  @override
+  State<_PinDialog> createState() => _PinDialogState();
+}
+
+class _PinDialogState extends State<_PinDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = _controller.text;
+    Navigator.pop(context, value.length == 4 ? value : null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: context.colors.card,
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        obscureText: true,
+        keyboardType: TextInputType.number,
+        maxLength: 4,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: const InputDecoration(counterText: ''),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(onPressed: _submit, child: Text(widget.confirmLabel)),
+      ],
+    );
   }
 }
 

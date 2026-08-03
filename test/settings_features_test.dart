@@ -154,6 +154,37 @@ void main() {
       );
     });
 
+    // The category and country lists used to call the repository directly,
+    // which defaults to hiding adult channels, so the switch did nothing on
+    // those two screens.
+    test('the switch also reaches the category and country lists', () async {
+      final container = await testContainer(
+        channelRepository: _FakeChannelRepository([
+          _channel('Alpha.us'),
+          _channel('Adult.us', isNsfw: true),
+        ]),
+      );
+
+      Future<List<String>> categoryIds() async =>
+          (await container.read(channelsForCategoryProvider('general').future))
+              .map((channel) => channel.id)
+              .toList();
+      Future<List<String>> countryIds() async =>
+          (await container.read(channelsForCountryProvider('US').future))
+              .map((channel) => channel.id)
+              .toList();
+
+      expect(await categoryIds(), ['Alpha.us']);
+      expect(await countryIds(), ['Alpha.us']);
+
+      container
+          .read(parentalSettingsProvider.notifier)
+          .setAllowAdultChannels(allow: true);
+
+      expect(await categoryIds(), ['Alpha.us', 'Adult.us']);
+      expect(await countryIds(), ['Alpha.us', 'Adult.us']);
+    });
+
     test('persists the switch and the PIN', () async {
       final container = await testContainer();
       final notifier = container.read(parentalSettingsProvider.notifier)

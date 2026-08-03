@@ -9,13 +9,19 @@ import 'package:tiwee/gen/assets.gen.dart';
 import 'package:tiwee/presentation/screens/home/parental_control_page.dart';
 import 'package:tiwee/presentation/screens/home/saved_channels_page.dart';
 import 'package:tiwee/presentation/screens/home/setting.dart';
+import 'package:tiwee/presentation/screens/home/sorted_by_category_page.dart';
 import 'package:tiwee/presentation/screens/home/sorted_by_country_page.dart';
+import 'package:tiwee/presentation/widgets/channel_grid.dart';
 import 'package:tiwee/presentation/widgets/home_page_widget/big_card_channel.dart';
+import 'package:tiwee/presentation/widgets/tv_card.dart';
 
 import 'helpers.dart';
 
 /// A portrait phone, close to the iPhone 17 Pro logical size.
 const Size _portrait = Size(402, 874);
+
+/// The same phone on its side.
+const Size _landscape = Size(874, 402);
 
 /// The size a menu tile gets in portrait: half the padded width, square.
 const Size _menuTile = Size(171, 171);
@@ -227,14 +233,101 @@ void main() {
     });
   });
 
+  group('ParentalControlPage PIN dialog', () {
+    // The controller was disposed in showDialog().whenComplete, which fires
+    // while the route is still animating out and rebuilding the TextField.
+    testWidgets('survives setting a PIN', (tester) async {
+      await _pumpAt(tester, _portrait, const ParentalControlPage());
+
+      await tester.tap(find.text('Set a PIN'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '1234');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Remove PIN'), findsOneWidget);
+    });
+
+    testWidgets('survives cancelling the dialog', (tester) async {
+      await _pumpAt(tester, _portrait, const ParentalControlPage());
+
+      await tester.tap(find.text('Set a PIN'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('SortedByCategoryPage', () {
+    Future<void> pumpCategory(WidgetTester tester, Size size) async {
+      setViewSize(tester, size);
+
+      final channels = [
+        _channel('Animax Asia', 'SG'),
+        _channel('Cartoon Network', 'US'),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(await mockPreferences()),
+            channelRepositoryProvider
+                .overrideWithValue(_FakeChannelRepository(channels)),
+          ],
+          child: MaterialApp(
+            home: SortedByCategoryPage(
+              categoryId: 'general',
+              categoryTitle: 'Animation',
+              preloadedChannels: channels,
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    // Portrait used to squeeze the landscape layout sideways: the artwork got
+    // a ~90pt column and only five channels fitted down a tall screen.
+    testWidgets('shows the channel grid in portrait', (tester) async {
+      await pumpCategory(tester, _portrait);
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ChannelGrid), findsOneWidget);
+      expect(find.byType(TvCard), findsNWidgets(2));
+      expect(find.text('Animax Asia'), findsOneWidget);
+    });
+
+    // The carousel is landscape-only now, but it still has to survive the
+    // AspectRatio(1/5) bug: that took the width from the available height and
+    // squeezed every row to ~65pt, rendering names at zero width.
+    testWidgets('keeps the preview and carousel in landscape', (tester) async {
+      await pumpCategory(tester, _landscape);
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ChannelGrid), findsNothing);
+      // .first because the carousel loops, so it builds each row more than
+      // once.
+      expect(
+        tester.getSize(find.text('Animax Asia').first).width,
+        greaterThan(60),
+        reason: 'the name column was collapsing to zero width',
+      );
+    });
+  });
+
   group('SortedByCountryPage', () {
     // The country name and channel count used to render inside a ~68pt
     // carousel slot, which clipped every name to "Uni…", wrapped the count
     // over three lines and overflowed the row.
     testWidgets('shows the full country name and count in portrait',
         (tester) async {
-      await tester.binding.setSurfaceSize(_portrait);
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      setViewSize(tester, _portrait);
 
       await tester.pumpWidget(
         ProviderScope(

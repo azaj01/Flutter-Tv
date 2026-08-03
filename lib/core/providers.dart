@@ -178,17 +178,33 @@ final channelsByCountryProvider = AsyncNotifierProvider<
 );
 
 /// Loads channels scoped to a single category.
+///
+/// Derived from [channelsProvider], not the repository: that keeps the
+/// parental filter in exactly one place and makes this list react to the
+/// switch. Reading the repository directly used to take its default of
+/// includeNsfw: false, so adult channels stayed hidden here even when the
+/// user had turned them on.
 final channelsForCategoryProvider = FutureProvider.autoDispose
-    .family<List<ChannelEntity>, String>((ref, categoryId) {
-  final repository = ref.watch(channelRepositoryProvider);
-  return repository.getChannelsByCategory(categoryId);
+    .family<List<ChannelEntity>, String>((ref, categoryId) async {
+  final channels = await ref.watch(channelsProvider.future);
+
+  return channels
+      .where((channel) => channel.categories.contains(categoryId))
+      .toList();
 });
 
 /// Loads channels scoped to a single country.
+///
+/// Derived from [channelsProvider] for the same reason as
+/// [channelsForCategoryProvider].
 final channelsForCountryProvider = FutureProvider.autoDispose
-    .family<List<ChannelEntity>, String>((ref, countryCode) {
-  final repository = ref.watch(channelRepositoryProvider);
-  return repository.getChannelsByCountry(countryCode);
+    .family<List<ChannelEntity>, String>((ref, countryCode) async {
+  final channels = await ref.watch(channelsProvider.future);
+  final code = countryCode.toUpperCase();
+
+  return channels
+      .where((channel) => channel.country.toUpperCase() == code)
+      .toList();
 });
 
 // ============================================================================
