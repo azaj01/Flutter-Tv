@@ -53,7 +53,7 @@ class SortedByCountryPage extends ConsumerWidget {
 
     if (countries.isLoading || channelsByCountry.isLoading) {
       return Scaffold(
-        body: Center(child: Assets.animation.spinner.lottie(width: 60)),
+        body: Center(child: Assets.animation.loading.lottie(width: 60)),
       );
     }
 

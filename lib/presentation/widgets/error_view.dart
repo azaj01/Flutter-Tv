@@ -61,7 +61,7 @@ class _CatalogErrorViewState extends ConsumerState<CatalogErrorView> {
                 SizedBox(
                   height: 48,
                   width: 60,
-                  child: Assets.animation.spinner.lottie(),
+                  child: Assets.animation.loading.lottie(),
                 )
               else
                 FilledButton.icon(
