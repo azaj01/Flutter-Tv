@@ -23,14 +23,24 @@ class _MainAppbarState extends State<MainAppbar>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _rotation;
+  late Animation<double> _scale;
+  bool _isSwitching = false;
 
   @override
   void initState() {
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 420),
       vsync: this,
     );
-    _rotation = Tween<double>(begin: 0, end: 3.1).animate(_controller);
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOutCubic,
+    );
+    _rotation = Tween<double>(begin: 0, end: 1).animate(curved);
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1, end: 0.82), weight: 45),
+      TweenSequenceItem(tween: Tween(begin: 0.82, end: 1), weight: 55),
+    ]).animate(curved);
     super.initState();
   }
 
@@ -40,25 +50,24 @@ class _MainAppbarState extends State<MainAppbar>
     super.dispose();
   }
 
-  /// Moves between the menu (page 0) and the settings page (page 1).
+  /// Selects the other home page and spins the settings icon.
   ///
-  /// The target is derived from the page that is actually showing. The old code
-  /// derived it from a toggle read before it was flipped, so the first tap
-  /// animated to the page the user was already on and did nothing visible.
+  /// [HomePage] owns the page transition so navigation is driven directly by
+  /// the selected index instead of coupling this app bar to a PageController.
   Future<void> _togglePage(WidgetRef ref) async {
+    if (_isSwitching) return;
+    _isSwitching = true;
+
     final currentIndex = ref.read(homePageIndexProvider);
     final targetIndex = currentIndex == 0 ? 1 : 0;
 
-    unawaited(
-      targetIndex == 1 ? _controller.forward() : _controller.reverse(),
-    );
+    // Finish a visible wheel animation before the app bar starts leaving the
+    // screen. Running both together made the fading page hide the gear spin.
+    await _controller.forward(from: 0);
+    if (!mounted) return;
 
     ref.read(homePageIndexProvider.notifier).select(targetIndex);
-    await ref.read(pageControllerProvider).animateToPage(
-          targetIndex,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeOutCubic,
-        );
+    _isSwitching = false;
   }
 
   @override
@@ -113,7 +122,9 @@ class _MainAppbarState extends State<MainAppbar>
             Consumer(
               builder: (context, ref, child) {
                 return GestureDetector(
-                  onTap: () => _togglePage(ref),
+                  key: const Key('settings-toggle-button'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => unawaited(_togglePage(ref)),
                   child: Container(
                     width: 50,
                     height: 50,
@@ -124,9 +135,13 @@ class _MainAppbarState extends State<MainAppbar>
                     ),
                     child: Transform.scale(
                       scale: 0.8,
-                      child: RotationTransition(
-                        turns: _rotation,
-                        child: Assets.icons.setting.svg(),
+                      child: ScaleTransition(
+                        scale: _scale,
+                        child: RotationTransition(
+                          key: const Key('settings-toggle-rotation'),
+                          turns: _rotation,
+                          child: Assets.icons.setting.svg(),
+                        ),
                       ),
                     ),
                   ),

@@ -1,11 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lottie/lottie.dart';
 import 'package:tiwee/core/providers.dart';
+import 'package:tiwee/data/datasources/update_checker.dart';
+import 'package:tiwee/domain/entities/category_entity.dart';
 import 'package:tiwee/domain/entities/channel_entity.dart';
 import 'package:tiwee/domain/entities/country_entity.dart';
 import 'package:tiwee/domain/repositories/i_channel_repository.dart';
 import 'package:tiwee/gen/assets.gen.dart';
+import 'package:tiwee/presentation/screens/home/home_page.dart';
+import 'package:tiwee/presentation/screens/home/menu.dart';
 import 'package:tiwee/presentation/screens/home/parental_control_page.dart';
 import 'package:tiwee/presentation/screens/home/saved_channels_page.dart';
 import 'package:tiwee/presentation/screens/home/setting.dart';
@@ -13,6 +21,7 @@ import 'package:tiwee/presentation/screens/home/sorted_by_category_page.dart';
 import 'package:tiwee/presentation/screens/home/sorted_by_country_page.dart';
 import 'package:tiwee/presentation/widgets/channel_grid.dart';
 import 'package:tiwee/presentation/widgets/home_page_widget/big_card_channel.dart';
+import 'package:tiwee/presentation/widgets/setting/setting_card.dart';
 import 'package:tiwee/presentation/widgets/tv_card.dart';
 
 import 'helpers.dart';
@@ -76,12 +85,139 @@ class _FakeCountryRepository implements ICountryRepository {
   Future<void> refresh() async {}
 }
 
+class _FakeCategoryRepository implements ICategoryRepository {
+  @override
+  Future<List<CategoryEntity>> getCategories() async => const [
+        CategoryEntity(id: 'general', name: 'General'),
+      ];
+
+  @override
+  Future<CategoryEntity?> getCategoryById(String categoryId) async => null;
+
+  @override
+  Future<void> refresh() async {}
+}
+
+class _PendingUpdateChecker extends UpdateChecker {
+  final Completer<UpdateStatus> _result = Completer<UpdateStatus>();
+
+  @override
+  Future<UpdateStatus> check({required String currentVersion}) =>
+      _result.future;
+}
+
 void main() {
+  group('HomePage navigation', () {
+    Future<void> pumpHome(WidgetTester tester) async {
+      setViewSize(tester, _portrait);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(
+              await mockPreferences(),
+            ),
+            channelRepositoryProvider.overrideWithValue(
+              _FakeChannelRepository([_channel('Alpha', 'US')]),
+            ),
+            categoryRepositoryProvider.overrideWithValue(
+              _FakeCategoryRepository(),
+            ),
+          ],
+          child: const MaterialApp(home: HomePage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('animates from the menu to settings', (tester) async {
+      await pumpHome(tester);
+
+      expect(find.byType(Menu), findsOneWidget);
+      expect(find.byType(Setting), findsNothing);
+
+      await tester.tap(find.byKey(const Key('settings-toggle-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final rotatingGear = tester.widget<RotationTransition>(
+        find.byKey(const Key('settings-toggle-rotation')),
+      );
+      expect(rotatingGear.turns.value, greaterThan(0));
+      expect(rotatingGear.turns.value, lessThan(1));
+      expect(find.byType(Menu), findsOneWidget);
+      expect(find.byType(Setting), findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump();
+      expect(find.byType(Menu), findsOneWidget);
+      expect(find.byType(Setting), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      expect(find.byType(Menu), findsNothing);
+      expect(find.byType(Setting), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('settings-toggle-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.byType(Menu), findsNothing);
+      expect(find.byType(Setting), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump();
+      expect(find.byType(Menu), findsOneWidget);
+      expect(find.byType(Setting), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      expect(find.byType(Menu), findsOneWidget);
+      expect(find.byType(Setting), findsNothing);
+    });
+
+    testWidgets('requires a second back press to exit', (tester) async {
+      final platformCalls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          platformCalls.add(call);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await pumpHome(tester);
+      platformCalls.clear();
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+
+      expect(find.text('Press back again to exit Tiwee.'), findsOneWidget);
+      expect(
+        platformCalls.where((call) => call.method == 'SystemNavigator.pop'),
+        isEmpty,
+      );
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+
+      expect(
+        platformCalls.where((call) => call.method == 'SystemNavigator.pop'),
+        hasLength(1),
+      );
+    });
+  });
+
   group('BigCardChannels', () {
     // A five-digit count used to overflow the tile by 21 logical pixels and
     // paint the debug stripe across the card.
-    testWidgets('fits a five-digit channel count in a portrait tile',
-        (tester) async {
+    testWidgets('fits a five-digit channel count in a portrait tile', (
+      tester,
+    ) async {
       await _pumpAt(
         tester,
         _portrait,
@@ -166,13 +302,80 @@ void main() {
     testWidgets('lays out without overflow in landscape', (tester) async {
       await _pumpAt(tester, const Size(874, 402), const Setting());
 
+      final grid = tester.widget<GridView>(
+        find.byKey(const Key('settings-landscape-grid')),
+      );
+      final firstCardSize = tester.getSize(find.byType(SettingCard).first);
+
+      expect(grid.scrollDirection, Axis.horizontal);
+      expect(firstCardSize.width, closeTo(firstCardSize.height, 0.01));
+
+      await tester.drag(
+        find.byKey(const Key('settings-landscape-grid')),
+        const Offset(-900, 0),
+      );
+      await tester.pumpAndSettle();
+
+      final utilityCard = find.byKey(
+        const Key('settings-landscape-utility-card'),
+      );
+      expect(utilityCard, findsOneWidget);
+      expect(
+        find.descendant(of: utilityCard, matching: find.text('Telegram')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: utilityCard, matching: find.text('GitHub')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: utilityCard,
+          matching: find.text('Check for update'),
+        ),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('uses the home loader while checking for updates', (
+      tester,
+    ) async {
+      setViewSize(tester, _portrait);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(
+              await mockPreferences(),
+            ),
+            appVersionProvider.overrideWith((ref) async => '1.0.0'),
+            updateCheckerProvider.overrideWithValue(_PendingUpdateChecker()),
+          ],
+          child: const MaterialApp(home: Setting()),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Check for update'));
+      await tester.pump();
+      await tester.pump();
+
+      final loader = tester.widget<LottieBuilder>(
+        find.byKey(const Key('update-check-loader')),
+      );
+
+      expect(
+        (loader.lottie as AssetLottie).assetName,
+        'assets/animation/loading.json',
+      );
     });
   });
 
   group('SavedChannelsPage', () {
-    testWidgets('explains how to save when nothing is saved yet',
-        (tester) async {
+    testWidgets('explains how to save when nothing is saved yet', (
+      tester,
+    ) async {
       await pumpApp(
         tester,
         const SavedChannelsPage(),
@@ -185,8 +388,9 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('lists saved channels and offers to clear them',
-        (tester) async {
+    testWidgets('lists saved channels and offers to clear them', (
+      tester,
+    ) async {
       await pumpApp(
         tester,
         const SavedChannelsPage(),
@@ -212,7 +416,10 @@ void main() {
       );
 
       expect(find.text('Show adult channels'), findsOneWidget);
-      expect(find.text('Adult channels are hidden everywhere.'), findsOneWidget);
+      expect(
+        find.text('Adult channels are hidden everywhere.'),
+        findsOneWidget,
+      );
       expect(find.text('Set a PIN'), findsOneWidget);
       expect(find.text('Remove PIN'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -275,9 +482,12 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            sharedPreferencesProvider.overrideWithValue(await mockPreferences()),
-            channelRepositoryProvider
-                .overrideWithValue(_FakeChannelRepository(channels)),
+            sharedPreferencesProvider.overrideWithValue(
+              await mockPreferences(),
+            ),
+            channelRepositoryProvider.overrideWithValue(
+              _FakeChannelRepository(channels),
+            ),
           ],
           child: MaterialApp(
             home: SortedByCategoryPage(
@@ -325,21 +535,25 @@ void main() {
     // The country name and channel count used to render inside a ~68pt
     // carousel slot, which clipped every name to "Uni…", wrapped the count
     // over three lines and overflowed the row.
-    testWidgets('shows the full country name and count in portrait',
-        (tester) async {
+    testWidgets('shows the full country name and count in portrait', (
+      tester,
+    ) async {
       setViewSize(tester, _portrait);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            sharedPreferencesProvider.overrideWithValue(await mockPreferences()),
+            sharedPreferencesProvider.overrideWithValue(
+              await mockPreferences(),
+            ),
             channelRepositoryProvider.overrideWithValue(
               _FakeChannelRepository([
                 for (var i = 0; i < 1797; i++) _channel('Channel$i', 'US'),
               ]),
             ),
-            countryRepositoryProvider
-                .overrideWithValue(_FakeCountryRepository()),
+            countryRepositoryProvider.overrideWithValue(
+              _FakeCountryRepository(),
+            ),
           ],
           child: const MaterialApp(
             home: SortedByCountryPage(allChannelsCount: 10469),

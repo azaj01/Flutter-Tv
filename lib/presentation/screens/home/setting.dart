@@ -42,15 +42,69 @@ class Setting extends ConsumerWidget {
 
     Future<void> openLink(String url, String label) async {
       final uri = Uri.parse(url);
-      final launched =
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
       if (!launched && context.mounted) {
-        ShowSnackBar(
-          context: context,
-          text: 'Could not open $label',
-        ).show();
+        ShowSnackBar(context: context, text: 'Could not open $label').show();
       }
     }
+
+    final primaryTiles = <Widget>[
+      _IconTile(
+        label: 'Saved show',
+        asset: Assets.icons.saved,
+        badge: savedCount == 0 ? null : '$savedCount',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => const SavedChannelsPage(),
+          ),
+        ),
+      ),
+      const _ThemeTile(),
+      const _SleepTimerTile(),
+      SettingCard(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => const ParentalControlPage(),
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Assets.icons.parentLock.svg(
+              colorFilter: adultAllowed ? _whiteSvgFilter : _greenSvgFilter,
+              width: 38,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Parental',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const Text(
+              'Control',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+
+    final telegramTile = SettingCard(
+      onTap: () => openLink(kTelegramUrl, 'Telegram'),
+      child: const LineIcon.telegram(color: Colors.blueAccent, size: 30),
+    );
+    final githubTile = SettingCard(
+      onTap: () => openLink(kGithubUrl, 'GitHub'),
+      child: const LineIcon.github(color: Colors.white, size: 30),
+    );
 
     return SafeArea(
       child: Scaffold(
@@ -65,119 +119,72 @@ class Setting extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             child: Column(
               children: [
-                const MainAppbar(
-                  havSettingBtn: true,
-                  widget: ClockLabel(),
-                ),
+                const MainAppbar(havSettingBtn: true, widget: ClockLabel()),
                 const SizedBox(height: 30),
                 Expanded(
-                  // Scrollable so the tiles keep their proportions instead of
-                  // overflowing on short viewports (landscape, small phones).
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    // Two columns of square tiles, then full-width rows. The
-                    // old grid mixed 2- and 6-cell wide tiles into a 3-column
-                    // grid, so tiles could not be placed and several of them
-                    // never appeared on screen at all.
-                    child: StaggeredGrid.count(
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      crossAxisCount: 2,
-                      children: [
-                        StaggeredGridTile.count(
-                          crossAxisCellCount: 1,
-                          mainAxisCellCount: 1,
-                          child: _IconTile(
-                            label: 'Saved show',
-                            asset: Assets.icons.saved,
-                            badge: savedCount == 0 ? null : '$savedCount',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute<void>(
-                                builder: (context) => const SavedChannelsPage(),
+                  child: OrientationBuilder(
+                    builder: (context, orientation) {
+                      if (orientation == Orientation.landscape) {
+                        // Match the home menu: one row of square cards that
+                        // scrolls horizontally across a short viewport.
+                        return GridView.count(
+                          key: const Key('settings-landscape-grid'),
+                          crossAxisCount: 1,
+                          scrollDirection: Axis.horizontal,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            for (final tile in [
+                              ...primaryTiles,
+                              _LandscapeUtilityTile(
+                                onTelegram: () =>
+                                    openLink(kTelegramUrl, 'Telegram'),
+                                onGithub: () => openLink(kGithubUrl, 'GitHub'),
                               ),
-                            ),
-                          ),
-                        ),
-                        const StaggeredGridTile.count(
-                          crossAxisCellCount: 1,
-                          mainAxisCellCount: 1,
-                          child: _ThemeTile(),
-                        ),
-                        const StaggeredGridTile.count(
-                          crossAxisCellCount: 1,
-                          mainAxisCellCount: 1,
-                          child: _SleepTimerTile(),
-                        ),
-                        StaggeredGridTile.count(
-                          crossAxisCellCount: 1,
-                          mainAxisCellCount: 1,
-                          child: SettingCard(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute<void>(
-                                builder: (context) =>
-                                    const ParentalControlPage(),
+                            ])
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 10,
+                                ),
+                                child: tile,
                               ),
+                          ],
+                        );
+                      }
+
+                      // Two columns of square tiles, then full-width rows.
+                      return SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: StaggeredGrid.count(
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          crossAxisCount: 2,
+                          children: [
+                            for (final tile in primaryTiles)
+                              StaggeredGridTile.count(
+                                crossAxisCellCount: 1,
+                                mainAxisCellCount: 1,
+                                child: tile,
+                              ),
+                            const StaggeredGridTile.extent(
+                              crossAxisCellCount: 2,
+                              mainAxisExtent: _kShortTileExtent,
+                              child: _UpdateTile(),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Assets.icons.parentLock.svg(
-                                  colorFilter: adultAllowed
-                                      ? _whiteSvgFilter
-                                      : _greenSvgFilter,
-                                  width: 38,
-                                ),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Parental',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const Text(
-                                  'Control',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                            StaggeredGridTile.extent(
+                              crossAxisCellCount: 1,
+                              mainAxisExtent: _kShortTileExtent,
+                              child: telegramTile,
                             ),
-                          ),
-                        ),
-                        const StaggeredGridTile.extent(
-                          crossAxisCellCount: 2,
-                          mainAxisExtent: _kShortTileExtent,
-                          child: _UpdateTile(),
-                        ),
-                        StaggeredGridTile.extent(
-                          crossAxisCellCount: 1,
-                          mainAxisExtent: _kShortTileExtent,
-                          child: SettingCard(
-                            onTap: () => openLink(kTelegramUrl, 'Telegram'),
-                            child: const LineIcon.telegram(
-                              color: Colors.blueAccent,
-                              size: 30,
+                            StaggeredGridTile.extent(
+                              crossAxisCellCount: 1,
+                              mainAxisExtent: _kShortTileExtent,
+                              child: githubTile,
                             ),
-                          ),
+                          ],
                         ),
-                        StaggeredGridTile.extent(
-                          crossAxisCellCount: 1,
-                          mainAxisExtent: _kShortTileExtent,
-                          child: SettingCard(
-                            onTap: () => openLink(kGithubUrl, 'GitHub'),
-                            child: const LineIcon.github(
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -185,6 +192,94 @@ class Setting extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Compact landscape-only card: social links share the top row and the update
+/// action spans the bottom, so three secondary actions use one home-card slot.
+class _LandscapeUtilityTile extends StatelessWidget {
+  const _LandscapeUtilityTile({
+    required this.onTelegram,
+    required this.onGithub,
+  });
+
+  final VoidCallback onTelegram;
+  final VoidCallback onGithub;
+
+  @override
+  Widget build(BuildContext context) {
+    return SettingCard(
+      key: const Key('settings-landscape-utility-card'),
+      onTap: null,
+      child: Column(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _CompactLinkAction(
+                    label: 'Telegram',
+                    icon: const LineIcon.telegram(
+                      color: Colors.blueAccent,
+                      size: 28,
+                    ),
+                    onTap: onTelegram,
+                  ),
+                ),
+                const VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: Colors.white12,
+                ),
+                Expanded(
+                  child: _CompactLinkAction(
+                    label: 'GitHub',
+                    icon: const LineIcon.github(
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onTap: onGithub,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, thickness: 1, color: Colors.white12),
+          const SizedBox(height: 76, child: _UpdateTile(embedded: true)),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactLinkAction extends StatelessWidget {
+  const _CompactLinkAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final Widget icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          icon,
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -235,8 +330,10 @@ class _IconTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   child: Text(
                     count,
                     style: const TextStyle(
@@ -407,7 +504,9 @@ class _SleepTimerTile extends ConsumerWidget {
 
 /// "Check for update": asks GitHub for the latest release and reports back.
 class _UpdateTile extends ConsumerStatefulWidget {
-  const _UpdateTile();
+  const _UpdateTile({this.embedded = false});
+
+  final bool embedded;
 
   @override
   ConsumerState<_UpdateTile> createState() => _UpdateTileState();
@@ -470,48 +569,55 @@ class _UpdateTileState extends ConsumerState<_UpdateTile> {
   Widget build(BuildContext context) {
     final version = ref.watch(appVersionProvider).value;
 
-    return SettingCard(
-      onTap: _check,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Check for update',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white70, fontSize: 17),
-                  ),
-                  if (version != null)
-                    Text(
-                      'Version $version',
-                      style:
-                          const TextStyle(color: Colors.white38, fontSize: 12),
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Check for update',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                if (version != null)
+                  Text(
+                    'Version $version',
+                    style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11,
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
-            if (_checking)
-              // Sized to the icon it replaces so the row does not jump.
-              SizedBox(
-                width: 26,
-                height: 26,
-                child: Assets.animation.spinner.lottie(),
-              )
-            else
-              Assets.icons.update.svg(
-                colorFilter: _greenSvgFilter,
-                width: 26,
+          ),
+          if (_checking)
+            SizedBox(
+              width: 26,
+              height: 26,
+              child: Assets.animation.loading.lottie(
+                key: const Key('update-check-loader'),
               ),
-          ],
-        ),
+            )
+          else
+            Assets.icons.update.svg(colorFilter: _greenSvgFilter, width: 24),
+        ],
       ),
     );
+
+    if (widget.embedded) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _check,
+        child: content,
+      );
+    }
+
+    return SettingCard(onTap: _check, child: content);
   }
 }
