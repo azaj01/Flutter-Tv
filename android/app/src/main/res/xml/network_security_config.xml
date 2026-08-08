@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  About a fifth of the streams published by the iptv-org API are served over
+  plain HTTP. Android blocks cleartext by default from API 28, so without this
+  those channels fail to play with an opaque network error.
+
+  The channel API itself is HTTPS and stays that way; only stream playback
+  needs the exception.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -1,30 +1,74 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility that Flutter provides. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tiwee/data/datasources/iptv_remote_data_source.dart';
+import 'package:tiwee/domain/entities/channel_entity.dart';
+import 'package:tiwee/presentation/screens/home/sorted_by_country_page.dart';
+import 'package:tiwee/presentation/widgets/error_view.dart';
+import 'package:tiwee/presentation/widgets/tv_card.dart';
 
-import 'package:Tiwee/main.dart';
+import 'helpers.dart';
+
+const ChannelEntity _channelWithoutLogo = ChannelEntity(
+  id: 'Alpha.us',
+  name: 'Alpha Television',
+  altNames: [],
+  country: 'US',
+  categories: ['news'],
+  isNsfw: false,
+  streams: [
+    StreamEntity(url: 'https://a/live.m3u8', title: 'Alpha', quality: '1080p'),
+  ],
+);
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('TvCard', () {
+    testWidgets('shows the channel name and its best quality', (tester) async {
+      await pumpApp(tester, const SizedBox(width: 200, height: 200, child: TvCard(channel: _channelWithoutLogo)));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      expect(find.text('Alpha Television'), findsOneWidget);
+      expect(find.text('1080p'), findsOneWidget);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    testWidgets('falls back to initials when a channel has no logo',
+        (tester) async {
+      await pumpApp(tester, const SizedBox(width: 200, height: 200, child: TvCard(channel: _channelWithoutLogo)));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      expect(find.text('AT'), findsOneWidget);
+    });
+  });
+
+  group('CatalogErrorView', () {
+    testWidgets('explains the failure and offers a retry', (tester) async {
+      await pumpApp(
+        tester,
+        CatalogErrorView(error: ApiException('No internet connection.')),
+      );
+
+      expect(find.text('No internet connection.'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Try again'), findsOneWidget);
+    });
+
+    testWidgets('hides implementation detail for unexpected errors',
+        (tester) async {
+      await pumpApp(
+        tester,
+        const CatalogErrorView(error: FormatException('offset 12')),
+      );
+
+      expect(find.textContaining('offset 12'), findsNothing);
+      expect(find.text('Could not load channels right now.'), findsOneWidget);
+    });
+  });
+
+  group('flagFromCode', () {
+    test('maps ISO codes to flag emoji', () {
+      expect(flagFromCode('US'), '🇺🇸');
+      expect(flagFromCode('FR'), '🇫🇷');
+    });
+
+    test('falls back for codes that are not two letters', () {
+      expect(flagFromCode('USA'), '🏳️');
+      expect(flagFromCode('12'), '🏳️');
+    });
   });
 }

@@ -1,201 +1,261 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:lottie/lottie.dart';
-import 'package:Tiwee/business_logic/model/channel.dart';
-import 'package:Tiwee/core/consts.dart';
-import 'package:Tiwee/presentation/screens/home/player.dart';
+import 'package:tiwee/core/consts.dart';
+import 'package:tiwee/core/providers.dart';
+import 'package:tiwee/domain/entities/channel_entity.dart';
+import 'package:tiwee/gen/assets.gen.dart';
+import 'package:tiwee/presentation/widgets/channel_grid.dart';
+import 'package:tiwee/presentation/widgets/channel_logo.dart';
+import 'package:tiwee/presentation/widgets/channel_player.dart';
+import 'package:tiwee/presentation/widgets/error_view.dart';
 
-class SortedByCategoryPage extends StatefulWidget {
-  const SortedByCategoryPage(
-      {Key? key, required this.categoryName, required this.channels})
-      : super(key: key);
+class SortedByCategoryPage extends ConsumerStatefulWidget {
+  const SortedByCategoryPage({
+    required this.categoryId,
+    required this.categoryTitle,
+    super.key,
+    this.preloadedChannels = const [],
+  });
 
-  final String categoryName;
-  final List<ChannelObj> channels;
+  final String categoryId;
+  final String categoryTitle;
+  final List<ChannelEntity> preloadedChannels;
 
   @override
-  State<SortedByCategoryPage> createState() => _SortedByCategoryPageState();
+  ConsumerState<SortedByCategoryPage> createState() =>
+      _SortedByCategoryPageState();
 }
 
-class _SortedByCategoryPageState extends State<SortedByCategoryPage> {
-  int currentIndex = 0;
+class _SortedByCategoryPageState extends ConsumerState<SortedByCategoryPage> {
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final channelsAsync = ref.watch(
+      channelsForCategoryProvider(widget.categoryId),
+    );
 
-    print(widget.categoryName);
-    print(kCategoryType[widget.categoryName]);
+    if (channelsAsync.hasError && channelsAsync.value == null) {
+      return Scaffold(
+        body: SafeArea(child: CatalogErrorView(error: channelsAsync.error)),
+      );
+    }
+
+    final channels = channelsAsync.value ?? widget.preloadedChannels;
+
+    if (channelsAsync.isLoading && channels.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Assets.animation.loading.lottie(width: size.width / 4),
+        ),
+      );
+    }
+
+    if (channels.isEmpty) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: SizedBox(
+              width: size.width / 3,
+              child: Assets.animation.notFound.lottie(width: 100),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // The carousel index outlives list changes (a refresh can return fewer
+    // channels), so it has to be clamped before it is used to index.
+    final selectedIndex = _currentIndex.clamp(0, channels.length - 1);
+    final backdrop = kCategoryType[widget.categoryTitle];
+
     return SafeArea(
       child: Scaffold(
-          body: widget.channels.isEmpty
-              ? Center(
-                  child: SizedBox(
-                      width: size.width / 3,
-                      child: Lottie.asset(
-                        kNotFound,
-                        width: 100,
-                      )))
-              : Stack(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      child: AnimatedOpacity(
-                          opacity: 0.2,
-                          duration: Duration(seconds: 1),
-                          child: CachedNetworkImage(
-                            imageUrl:
-                                kCategoryType[widget.categoryName].toString(),
-                            placeholder: (context, url) => Container(),
-                            fit: BoxFit.cover,
-                            fadeInCurve: Curves.bounceIn,
-                          )),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        width: double.infinity,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                                child: Container(
-                              width: 140,
-                              height: 140,
-                              child: CachedNetworkImage(
-                                errorWidget: (context, url, error) => Text(
-                                  error.toString(),
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                                imageBuilder: (context, imageProvider) =>
-                                    Container(
-                                  height: size.width / 2.5,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(25),
-                                    image: DecorationImage(
-                                        image: imageProvider,
-                                        fit: BoxFit.cover),
-                                  ),
-                                ),
-
-                                placeholder: (context, url) => Center(
-                                    child: SizedBox(
-                                        width: 50,
-                                        child:
-                                            Lottie.asset(kLoading, width: 60))),
-                                imageUrl: widget.channels[currentIndex].logo,
-                                // progressIndicatorBuilder: (context, url, progress) => ProgressIndicator(value: progress.progress,),
-                                fit: BoxFit.cover,
-                              ),
-                            )),
-                            SizedBox(
-                              width: 10,
-                            ),
-                            Expanded(
-                              flex: 3,
-                              child: AnimationLimiter(
-                                child: CarouselSlider.builder(
-                                  itemCount: widget.channels.length,
-                                  itemBuilder: (context, index, realIndex) {
-                                    print("wrw");
-
-                                    return AnimationConfiguration.staggeredList(
-                                      position: index,
-                                      duration:
-                                          const Duration(milliseconds: 700),
-                                      child: SlideAnimation(
-                                        verticalOffset: 50.0,
-                                        child: FadeInAnimation(
-                                          child: GestureDetector(
-                                            onTap: () => Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => Player(
-                                                      url: widget
-                                                          .channels[index].url),
-                                                )),
-                                            child: Container(
-                                                width: double.infinity,
-                                                height: 60,
-                                                decoration: BoxDecoration(
-                                                    color: index == currentIndex
-                                                        ? Colors.black
-                                                            .withOpacity(0.6)
-                                                        : Colors.black
-                                                            .withOpacity(0.3),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            20)),
-                                                child: Padding(
-                                                  padding: const EdgeInsets
-                                                          .symmetric(
-                                                      horizontal: 18.0,
-                                                      vertical: 8),
-                                                  child: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        widget.channels[index]
-                                                            .name,
-                                                        style: TextStyle(
-                                                            color: index ==
-                                                                    currentIndex
-                                                                ? Colors.white
-                                                                    .withOpacity(
-                                                                        0.7)
-                                                                : Colors.white
-                                                                    .withOpacity(
-                                                                        0.3)),
-                                                      ),
-                                                      Text(
-                                                        widget.channels[index]
-                                                            .languages[0].name,
-                                                        style: TextStyle(
-                                                            color: index ==
-                                                                    currentIndex
-                                                                ? Colors.white
-                                                                    .withOpacity(
-                                                                        0.7)
-                                                                : Colors.white
-                                                                    .withOpacity(
-                                                                        0.3)),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                )),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  options: CarouselOptions(
-                                    onPageChanged: (index, reason) {
-                                      setState(() {
-                                        currentIndex = index;
-                                      });
-                                    },
-                                    aspectRatio: 1 / 5,
-                                    viewportFraction: 0.2,
-                                    autoPlay: false,
-                                    enlargeCenterPage: true,
-                                    scrollPhysics:
-                                        const BouncingScrollPhysics(),
-                                    scrollDirection: Axis.vertical,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+        body: Stack(
+          children: [
+            if (backdrop != null)
+              SizedBox(
+                width: double.infinity,
+                child: AnimatedOpacity(
+                  opacity: 0.2,
+                  duration: const Duration(seconds: 1),
+                  child: CachedNetworkImage(
+                    imageUrl: backdrop,
+                    placeholder: (context, url) => const SizedBox.shrink(),
+                    errorWidget: (context, url, error) =>
+                        const SizedBox.shrink(),
+                    fit: BoxFit.cover,
+                    fadeInCurve: Curves.bounceIn,
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(Icons.arrow_back),
+                        color: Colors.white70,
+                      ),
+                      Expanded(
+                        child: Text(
+                          widget.categoryTitle,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 21,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    )
-                  ],
-                )),
+                      Text(
+                        '${channels.length} channels',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child:
+                        MediaQuery.orientationOf(context) == Orientation.portrait
+                            ? _buildGrid(channels)
+                            : _buildPreviewAndCarousel(channels, selectedIndex),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Portrait: the same responsive grid the country, all and saved pages use.
+  ///
+  /// The preview-beside-carousel layout is built for a wide viewport. In
+  /// portrait it squeezed the artwork into a ~90pt column and showed five
+  /// channels at a time down a tall screen, so the grid is used instead.
+  Widget _buildGrid(List<ChannelEntity> channels) {
+    return RefreshIndicator(
+      onRefresh: ref.read(catalogRefresherProvider).refreshQuietly,
+      child: ChannelGrid(channels: channels),
+    );
+  }
+
+  /// Landscape: artwork of the highlighted channel, with the channel list
+  /// scrolling vertically beside it.
+  Widget _buildPreviewAndCarousel(
+    List<ChannelEntity> channels,
+    int selectedIndex,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 140,
+            child: ChannelLogo(
+              channel: channels[selectedIndex],
+              padding: 12,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 3,
+          child: LayoutBuilder(
+            builder: (context, constraints) => AnimationLimiter(
+              child: CarouselSlider.builder(
+                itemCount: channels.length,
+                itemBuilder: (context, index, realIndex) {
+                  return AnimationConfiguration.staggeredList(
+                    position: index,
+                    duration: const Duration(milliseconds: 700),
+                    child: SlideAnimation(
+                      verticalOffset: 50,
+                      child: FadeInAnimation(
+                        child: _ChannelRow(
+                          channel: channels[index],
+                          isSelected: index == selectedIndex,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                options: CarouselOptions(
+                  onPageChanged: (index, reason) {
+                    setState(() => _currentIndex = index);
+                  },
+                  // An explicit height, not an aspect ratio: carousel_slider
+                  // wraps itself in an AspectRatio when height is null, and
+                  // 1/5 made it take its width from the available height.
+                  // Every row ended up ~65pt wide, so channel names rendered
+                  // at zero width and the row overflowed by a fraction of a
+                  // pixel.
+                  height: constraints.maxHeight,
+                  viewportFraction: 0.2,
+                  enlargeCenterPage: true,
+                  scrollPhysics: const BouncingScrollPhysics(),
+                  scrollDirection: Axis.vertical,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChannelRow extends StatelessWidget {
+  const _ChannelRow({required this.channel, required this.isSelected});
+
+  final ChannelEntity channel;
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor =
+        Colors.white.withValues(alpha: isSelected ? 0.7 : 0.3);
+
+    return GestureDetector(
+      onTap: () => launchChannelPlayer(context, channel),
+      child: Container(
+        width: double.infinity,
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: isSelected ? 0.6 : 0.3),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  channel.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: textColor),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                channel.country,
+                style: TextStyle(color: textColor),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,20 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:line_icons/line_icons.dart';
-import 'package:Tiwee/presentation/screens/home/home_page.dart';
-
-final forwardProvider = StateProvider<bool>((ref) {
-  return true;
-});
+import 'package:tiwee/gen/assets.gen.dart';
+import 'package:tiwee/presentation/screens/home/home_page.dart';
 
 class MainAppbar extends StatefulWidget {
-   MainAppbar({
-    Key? key,
+  const MainAppbar({
     required this.widget,
-    this.havSettingBtn=false
-
-  }) : super(key: key);
+    super.key,
+    this.havSettingBtn = false,
+  });
   final Widget widget;
   final bool havSettingBtn;
 
@@ -25,21 +22,25 @@ class MainAppbar extends StatefulWidget {
 class _MainAppbarState extends State<MainAppbar>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-
-  void changePage(PageController pageController, int index) async {
-    await Future.delayed(const Duration(milliseconds: 500), () {
-      index == 0
-          ? pageController.animateToPage(1, duration: Duration(seconds: 1), curve: Curves.bounceOut)
-          : pageController.animateToPage(0, duration: Duration(seconds: 1), curve: Curves.bounceOut);
-    });
-  }
+  late Animation<double> _rotation;
+  late Animation<double> _scale;
+  bool _isSwitching = false;
 
   @override
   void initState() {
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 420),
       vsync: this,
     );
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOutCubic,
+    );
+    _rotation = Tween<double>(begin: 0, end: 1).animate(curved);
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1, end: 0.82), weight: 45),
+      TweenSequenceItem(tween: Tween(begin: 0.82, end: 1), weight: 55),
+    ]).animate(curved);
     super.initState();
   }
 
@@ -49,77 +50,104 @@ class _MainAppbarState extends State<MainAppbar>
     super.dispose();
   }
 
+  /// Selects the other home page and spins the settings icon.
+  ///
+  /// [HomePage] owns the page transition so navigation is driven directly by
+  /// the selected index instead of coupling this app bar to a PageController.
+  Future<void> _togglePage(WidgetRef ref) async {
+    if (_isSwitching) return;
+    _isSwitching = true;
+
+    final currentIndex = ref.read(homePageIndexProvider);
+    final targetIndex = currentIndex == 0 ? 1 : 0;
+
+    // Finish a visible wheel animation before the app bar starts leaving the
+    // screen. Running both together made the fading page hide the gear spin.
+    await _controller.forward(from: 0);
+    if (!mounted) return;
+
+    ref.read(homePageIndexProvider.notifier).select(targetIndex);
+    _isSwitching = false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xff6A359C), Color(0xff9969C7)])),
-                child: const Icon(
-                  LineIcons.play,
-                  color: Colors.white,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xff6A359C), Color(0xff9969C7)],
+                    ),
+                  ),
+                  child: const Icon(
+                    LineIcons.play,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              const SizedBox(
-                width: 5,
-              ),
-              const Padding(
-                padding: EdgeInsets.all(4.0),
-                child: Text(
-                  "Tiwee",
-                  style: TextStyle(
+                const SizedBox(
+                  width: 5,
+                ),
+                const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Text(
+                    'Tiwee',
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
-                      fontSize: 21),
+                      fontSize: 21,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(
+                const SizedBox(
                   height: 35,
-                  child: VerticalDivider(color: Colors.grey, thickness: 1)),
-              widget.widget
-            ],
+                  child: VerticalDivider(color: Colors.grey, thickness: 1),
+                ),
+                Expanded(child: widget.widget),
+              ],
+            ),
           ),
-          widget.havSettingBtn?Consumer(builder: (context, ref, child) {
-            final pageController = ref.watch(pageControllerProvider);
-            final forward = ref.watch(forwardProvider.state);
-
-            return GestureDetector(
-                onTap: () {
-                  print(forward.state);
-                   _controller.forward();
-                  forward.state = !forward.state;
-                  print(forward);
-                  changePage(pageController, forward.state ? 1 : 0);
-                },
-                child: Container(
+          if (widget.havSettingBtn)
+            Consumer(
+              builder: (context, ref, child) {
+                return GestureDetector(
+                  key: const Key('settings-toggle-button'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => unawaited(_togglePage(ref)),
+                  child: Container(
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.transparent,
-                        border: Border.all(color: Colors.grey)),
+                      shape: BoxShape.circle,
+                      color: Colors.transparent,
+                      border: Border.all(color: Colors.grey),
+                    ),
                     child: Transform.scale(
-                        scale: 0.8,
+                      scale: 0.8,
+                      child: ScaleTransition(
+                        scale: _scale,
                         child: RotationTransition(
-                          turns:
-                              Tween(begin: 0.0, end: 3.1).animate(_controller),
-                          child: SvgPicture.asset(
-                            "assets/icons/setting.svg",
-                          ),
-                        ))));
-          }):Container()
+                          key: const Key('settings-toggle-rotation'),
+                          turns: _rotation,
+                          child: Assets.icons.setting.svg(),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
